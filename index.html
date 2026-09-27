@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#08090c">
+<title>BeeQR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#08090c;color:#fff;min-height:100vh}
+.app{width:100%;max-width:520px;margin:auto;min-height:100vh}
+header{height:70px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #20222a}
+.logo{font-size:25px;font-weight:900;letter-spacing:-1px}.logo span{color:#f5c518}
+.header-icon{width:40px;height:40px;border-radius:13px;border:1px solid #252832;background:#12141a;color:white;font-size:20px}
+.page{display:none;padding:22px 16px 35px;animation:pageIn .2s ease}.page.active{display:block}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.title{font-size:29px;font-weight:900;letter-spacing:-.7px;margin-bottom:7px}
+.subtitle{color:#9297a5;font-size:14px;line-height:1.5;margin-bottom:25px}
+.card{background:#12141a;border:1px solid #252832;border-radius:21px;padding:17px;margin-bottom:15px}
+.label{display:block;color:#aeb2bd;font-size:12px;font-weight:bold;margin-bottom:8px}
+.types{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.type{min-height:70px;border:1px solid #292c36;border-radius:15px;background:#191b22;color:#999eab;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:bold}
+.type .icon{font-size:21px}.type.active{color:#f5c518;border-color:#f5c518;background:#211f14}
+textarea,input,select{width:100%;border:1px solid #292c36;outline:none;border-radius:14px;background:#090a0e;color:white;padding:14px;font-size:15px;margin-bottom:15px}
+textarea{height:120px;resize:none}
+textarea:focus,input:focus,select:focus{border-color:#f5c518}
+.colors{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.color{background:#090a0e;border:1px solid #292c36;border-radius:14px;padding:10px}
+.color input{padding:0;height:35px;border:0;margin:0}
+.generate{width:100%;height:54px;border:0;border-radius:15px;background:#f5c518;color:#111;font-weight:900;font-size:15px;margin-top:5px}
+.generate:active,.action:active,.new-qr:active{transform:scale(.98)}
+.back{width:42px;height:42px;border-radius:13px;border:1px solid #292c36;background:#12141a;color:white;font-size:20px;margin-bottom:22px}
+.result-title{text-align:center;font-size:27px;font-weight:900;margin-bottom:6px}
+.result-subtitle{text-align:center;color:#9297a5;font-size:13px;margin-bottom:22px}
+.qr-card{background:#12141a;border:1px solid #252832;border-radius:23px;padding:20px 15px;text-align:center}
+.qr-container{width:270px;height:270px;max-width:100%;margin:auto;background:#fff;border-radius:18px;display:flex;align-items:center;justify-content:center;padding:15px;overflow:hidden}
+#qrcode{display:flex;align-items:center;justify-content:center}
+#qrcode img,#qrcode canvas{max-width:100%;max-height:100%}
+.data-box{margin-top:18px;padding:13px;border-radius:13px;background:#090a0e;border:1px solid #292c36;color:#aeb2bd;font-size:12px;word-break:break-word;text-align:left;max-height:90px;overflow:auto}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
+.action{height:50px;border-radius:14px;border:1px solid #292c36;background:#191b22;color:white;font-weight:bold;font-size:13px}
+.action.primary{background:#f5c518;color:#111;border-color:#f5c518}
+.new-qr{width:100%;height:50px;margin-top:10px;border-radius:14px;border:1px solid #292c36;background:transparent;color:#aaa;font-weight:bold}
+#wifiFields{display:none}
+.toast{position:fixed;left:50%;bottom:25px;transform:translate(-50%,20px);background:#20232b;color:white;border:1px solid #353946;padding:13px 18px;border-radius:14px;font-size:13px;font-weight:bold;opacity:0;pointer-events:none;transition:.25s;z-index:100;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.loading{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:90}
+.loading.show{display:flex}
+.loader-box{background:#15171d;border:1px solid #292c36;border-radius:18px;padding:22px 28px;text-align:center}
+.spinner{width:30px;height:30px;border:3px solid #444;border-top-color:#f5c518;border-radius:50%;animation:spin .7s linear infinite;margin:auto auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:360px){.types{grid-template-columns:repeat(2,1fr)}.title{font-size:25px}.qr-container{width:235px;height:235px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="logo">Bee<span>QR</span></div><button class="header-icon" onclick="showCreate()">⋮</button></header>
+
+<section id="createPage" class="page active">
+<h1 class="title">Créer un QR Code</h1>
+<p class="subtitle">Entre tes informations et génère ton QR Code en quelques secondes.</p>
+
+<div class="card">
+<span class="label">Type de QR Code</span>
+<div class="types">
+<button class="type active" onclick="selectType('text',this)"><span class="icon">🔗</span>Lien</button>
+<button class="type" onclick="selectType('phone',this)"><span class="icon">📞</span>Téléphone</button>
+<button class="type" onclick="selectType('email',this)"><span class="icon">✉️</span>Email</button>
+<button class="type" onclick="selectType('wifi',this)"><span class="icon">📶</span>Wi-Fi</button>
+</div>
+
+<div id="normalFields">
+<span class="label" id="inputLabel">Lien ou texte</span>
+<textarea id="content" placeholder="https://exemple.com"></textarea>
+</div>
+
+<div id="wifiFields">
+<span class="label">Nom du réseau</span><input id="wifiName" placeholder="Mon Wi-Fi">
+<span class="label">Mot de passe</span><input id="wifiPassword" placeholder="Mot de passe">
+<span class="label">Sécurité</span>
+<select id="wifiSecurity"><option value="WPA">WPA / WPA2</option><option value="WEP">WEP</option><option value="nopass">Aucune</option></select>
+</div>
+
+<div class="colors">
+<div class="color"><span class="label">Couleur QR</span><input type="color" id="qrColor" value="#000000"></div>
+<div class="color"><span class="label">Couleur fond</span><input type="color" id="bgColor" value="#ffffff"></div>
+</div>
+
+<div class="suggestions">
+<span class="label">Suggestions de liens</span>
+<div class="suggestion-list">
+<button class="suggestion" id="suggestion1" onclick="useSuggestedLink('https://i.postimg.cc/W4MQKn1m/images-(4).jpg',this)">
+<img src="https://i.postimg.cc/W4MQKn1m/images-(4).jpg" alt="Suggestion 1"><span>Image 1</span>
+</button>
+<button class="suggestion" id="suggestion2" onclick="useSuggestedLink('https://i.postimg.cc/C1xmNHBz/images-(5).jpg',this)">
+<img src="https://i.postimg.cc/C1xmNHBz/images-(5).jpg" alt="Suggestion 2"><span>Image 2</span>
+</button>
+</div>
+</div>
+</div>
+
+<button class="generate" onclick="generateQR()">✨ Générer le QR Code</button>
+</section>
+
+<section id="resultPage" class="page">
+<button class="back" onclick="showCreate()">←</button>
+<h1 class="result-title">Ton QR Code</h1>
+<p class="result-subtitle">Ton QR Code est prêt.</p>
+<div class="qr-card">
+<div class="qr-container" id="qrBackground"><div id="qrcode"></div></div>
+<div class="data-box" id="generatedData">—</div>
+<div class="actions">
+<button class="action primary" onclick="downloadQR()">⬇️ Télécharger</button>
+<button class="action" onclick="shareQR()">↗️ Partager</button>
+</div>
+<button class="new-qr" onclick="showCreate()">＋ Créer un autre QR Code</button>
+</div>
+</section>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="loading" class="loading"><div class="loader-box"><div class="spinner"></div><div>Préparation...</div></div></div>
+
+<script>
+let currentType="text",currentCanvas=null,generatedValue="",generatedBlob=null;
+
+function toast(message){
+ const box=document.getElementById("toast");
+ box.textContent=message;box.classList.add("show");
+ setTimeout(()=>box.classList.remove("show"),2500);
+}
+function setLoading(state){
+ document.getElementById("loading").classList.toggle("show",state);
+}
+function selectType(type,button){
+ currentType=type;
+ document.querySelectorAll(".type").forEach(el=>el.classList.remove("active"));
+ button.classList.add("active");
+ const normal=document.getElementById("normalFields"),wifi=document.getElementById("wifiFields"),label=document.getElementById("inputLabel"),content=document.getElementById("content");
+ if(type==="wifi"){normal.style.display="none";wifi.style.display="block";}
+ else{
+  normal.style.display="block";wifi.style.display="none";
+  if(type==="phone"){label.textContent="Numéro de téléphone";content.placeholder="+227 XX XX XX XX";}
+  else if(type==="email"){label.textContent="Adresse email";content.placeholder="exemple@email.com";}
+  else{label.textContent="Lien ou texte";content.placeholder="https://exemple.com";}
+ }
+}
+function useSuggestedLink(url,button){
+ selectType("text",document.querySelectorAll(".type")[0]);
+ document.getElementById("content").value=url;
+ document.querySelectorAll(".suggestion").forEach(el=>el.classList.remove("selected"));
+ button.classList.add("selected");
+ toast("Lien sélectionné ✅");
+}
+function getData(){
+ if(currentType==="wifi"){
+  const name=document.getElementById("wifiName").value.trim(),password=document.getElementById("wifiPassword").value,security=document.getElementById("wifiSecurity").value;
+  if(!name){toast("Entre le nom du réseau Wi-Fi.");return null;}
+  return "WIFI:T:"+security+";S:"+name+";P:"+password+";;";
+ }
+ const value=document.getElementById("content").value.trim();
+ if(!value){toast("Entre une information à convertir.");return null;}
+ if(currentType==="phone")return "tel:"+value;
+ if(currentType==="email")return "mailto:"+value;
+ return value;
+}
+function canvasToBlob(canvas){
+ return new Promise(resolve=>canvas.toBlob(blob=>resolve(blob),"image/png",1));
+}
+async function generateQR(){
+ const data=getData();if(!data)return;
+ setLoading(true);generatedValue=data;generatedBlob=null;currentCanvas=null;
+ const qr=document.getElementById("qrcode");qr.innerHTML="";
+ const qrColor=document.getElementById("qrColor").value,bgColor=document.getElementById("bgColor").value;
+ document.getElementById("qrBackground").style.background=bgColor;
+ new QRCode(qr,{text:data,width:235,height:235,colorDark:qrColor,colorLight:bgColor,correctLevel:QRCode.CorrectLevel.H});
+ document.getElementById("generatedData").textContent=data;
+ setTimeout(async()=>{
+  currentCanvas=qr.querySelector("canvas");
+  if(currentCanvas)generatedBlob=await canvasToBlob(currentCanvas);
+  setLoading(false);showResult();
+ },500);
+}
+function showResult(){
+ document.getElementById("createPage").classList.remove("active");
+ document.getElementById("resultPage").classList.add("active");
+ window.scrollTo({top:0,behavior:"instant"});
+}
+function showCreate(){
+ document.getElementById("resultPage").classList.remove("active");
+ document.getElementById("createPage").classList.add("active");
+ window.scrollTo({top:0,behavior:"instant"});
+}
+async function downloadQR(){
+ if(!currentCanvas){toast("Le QR Code n'est pas encore prêt.");return;}
+ setLoading(true);
+ try{
+  if(!generatedBlob)generatedBlob=await canvasToBlob(currentCanvas);
+  const url=URL.createObjectURL(generatedBlob),link=document.createElement("a");
+  link.href=url;link.download="BeeQR-"+Date.now()+".png";link.style.display="none";
+  document.body.appendChild(link);link.click();document.body.removeChild(link);
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  setLoading(false);toast("✅ QR Code téléchargé !");
+ }catch(error){
+  console.error(error);setLoading(false);toast("Téléchargement impossible.");
+ }
+}
+async function shareQR(){
+ if(!currentCanvas){toast("Le QR Code n'est pas encore prêt.");return;}
+ setLoading(true);
+ try{
+  if(!generatedBlob)generatedBlob=await canvasToBlob(currentCanvas);
+  const file=new File([generatedBlob],"BeeQR.png",{type:"image/png"});
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+   setLoading(false);await navigator.share({title:"Mon QR Code",text:"QR Code créé avec BeeQR",files:[file]});return;
+  }
+  if(navigator.share){
+   setLoading(false);await navigator.share({title:"Mon QR Code",text:"Voici mon QR Code créé avec BeeQR :\n\n"+generatedValue});return;
+  }
+  if(navigator.clipboard){
+   await navigator.clipboard.writeText(generatedValue);setLoading(false);toast("📋 Contenu du QR copié !");return;
+  }
+  setLoading(false);toast("Le partage n'est pas disponible.");
+ }catch(error){console.log("Partage annulé :",error);setLoading(false);}
+}
+</script>
+</body>
+</html>
